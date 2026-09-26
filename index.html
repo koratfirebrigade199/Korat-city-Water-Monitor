@@ -1,488 +1,11 @@
-<!DOCTYPE html>
-<html lang="th" class="h-full bg-slate-900">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบติดตามระดับน้ำและแจ้งเตือนภัยน้ำท่วม เทศบาลนครนครราชสีมา</title>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Google Font: Kanit & Sarabun -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        navy: {
-                            800: '#0b192c',
-                            900: '#070f1e',
-                            950: '#030712'
-                        },
-                        korat: {
-                            blue: '#1e40af',
-                            cyan: '#0284c7',
-                            alert: '#dc2626',
-                            warning: '#ea580c',
-                            safe: '#16a34a'
-                        }
-                    },
-                    fontFamily: {
-                        kanit: ['Kanit', 'sans-serif'],
-                        sarabun: ['Sarabun', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
-
-    <style>
-        body {
-            font-family: 'Sarabun', sans-serif;
-        }
-        h1, h2, h3, h4, .font-kanit {
-            font-family: 'Kanit', sans-serif;
-        }
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #0f172a;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #1e293b;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #334155;
-        }
-        .glass-card {
-            background: rgba(15, 23, 42, 0.75);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        .pulse-red {
-            animation: pulse-red 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        @keyframes pulse-red {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.85; transform: scale(1.02); }
-        }
-        @media print {
-            .no-print { display: none !important; }
-            body { background: white !important; color: black !important; }
-            .glass-card { background: white !important; border: 1px solid #ccc !important; color: black !important; }
-        }
-    </style>
-</head>
-<body class="min-h-screen text-slate-100 flex flex-col antialiased selection:bg-blue-600 selection:text-white" id="app-body">
-
-    <!-- Top Emergency & Accessibility Header -->
-    <header class="bg-navy-950 border-b border-slate-800 sticky top-0 z-50 shadow-lg no-print">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-20">
-                <!-- Brand / Logo -->
-                <div class="flex items-center space-x-3">
-                    <div class="bg-gradient-to-br from-blue-600 to-cyan-500 p-2.5 rounded-xl shadow-md flex items-center justify-center">
-                        <i data-lucide="waves" class="w-7 h-7 text-white"></i>
-                    </div>
-                    <div>
-                        <div class="flex items-center space-x-2">
-                            <span class="bg-blue-900/80 text-blue-300 text-xs px-2 py-0.5 rounded font-kanit">ศูนย์ ปภ. เทศบาลนครนครราชสีมา</span>
-                            <span class="inline-flex items-center text-xs text-emerald-400 font-mono">
-                                <span class="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-ping"></span> Live System
-                            </span>
-                        </div>
-                        <h1 class="text-base sm:text-xl font-bold font-kanit text-white tracking-wide leading-tight">
-                            ระบบติดตามระดับน้ำและแจ้งเตือนภัยน้ำท่วม
-                        </h1>
-                    </div>
-                </div>
-
-                <!-- Accessibility Controls & Hotline Buttons -->
-                <div class="hidden md:flex items-center space-x-4">
-                    <!-- Font Scaling -->
-                    <div class="bg-slate-800/80 rounded-lg p-1 flex items-center border border-slate-700/60">
-                        <button onclick="changeFontSize(-1)" class="px-2 py-1 text-xs hover:bg-slate-700 rounded transition font-bold" title="ลดขนาดตัวอักษร">A-</button>
-                        <button onclick="resetFontSize()" class="px-2 py-1 text-xs hover:bg-slate-700 rounded transition font-bold border-x border-slate-700" title="ขนาดปกติ">A</button>
-                        <button onclick="changeFontSize(1)" class="px-2 py-1 text-xs hover:bg-slate-700 rounded transition font-bold" title="เพิ่มขนาดตัวอักษร">A+</button>
-                    </div>
-
-                    <!-- Emergency Hotline Badges -->
-                    <a href="tel:199" class="bg-red-600 hover:bg-red-500 text-white font-kanit px-3.5 py-2 rounded-lg text-sm font-semibold flex items-center space-x-2 transition shadow-md shadow-red-900/30">
-                        <i data-lucide="phone-call" class="w-4 h-4"></i>
-                        <span>แจ้งเหตุสายด่วน 199</span>
-                    </a>
-                    <a href="tel:044242222" class="bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/30 font-kanit px-3 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 transition">
-                        <i data-lucide="phone" class="w-4 h-4"></i>
-                        <span>0-4424-2222</span>
-                    </a>
-                </div>
-
-                <!-- Mobile menu toggle -->
-                <div class="flex md:hidden items-center space-x-2">
-                    <a href="tel:199" class="bg-red-600 text-white p-2 rounded-lg" title="โทร 199">
-                        <i data-lucide="phone-call" class="w-5 h-5"></i>
-                    </a>
-                    <button onclick="toggleMobileMenu()" class="p-2 text-slate-300 hover:text-white bg-slate-800 rounded-lg">
-                        <i data-lucide="menu" class="w-6 h-6"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Mobile Drawer -->
-        <div id="mobile-menu" class="hidden md:hidden border-t border-slate-800 bg-navy-900 px-4 py-3 space-y-3">
-            <div class="flex justify-between items-center py-2 border-b border-slate-800">
-                <span class="text-xs text-slate-400">ปรับขนาดอักษร:</span>
-                <div class="bg-slate-800 rounded p-1 flex space-x-1">
-                    <button onclick="changeFontSize(-1)" class="px-3 py-1 text-xs bg-slate-700 rounded">A-</button>
-                    <button onclick="resetFontSize()" class="px-3 py-1 text-xs bg-slate-700 rounded">A</button>
-                    <button onclick="changeFontSize(1)" class="px-3 py-1 text-xs bg-slate-700 rounded">A+</button>
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-2 font-kanit text-xs text-center">
-                <a href="tel:199" class="bg-red-600 text-white py-2 rounded-lg font-bold flex justify-center items-center gap-1">
-                    <i data-lucide="phone-call" class="w-4 h-4"></i> โทร 199
-                </a>
-                <a href="tel:044242222" class="bg-slate-800 text-cyan-400 py-2 rounded-lg font-bold flex justify-center items-center gap-1 border border-cyan-500/30">
-                    <i data-lucide="phone" class="w-4 h-4"></i> 0-4424-2222
-                </a>
-            </div>
-        </div>
-    </header>
-
-    <!-- Status Ticker & Simulation Toolbar -->
-    <div class="bg-slate-800/90 border-b border-slate-700/60 px-4 py-2.5 no-print">
-        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between text-xs gap-2">
-            <div class="flex items-center space-x-3 w-full md:w-auto overflow-hidden">
-                <span class="bg-blue-600/30 text-blue-300 font-kanit px-2.5 py-0.5 rounded-full font-medium whitespace-nowrap border border-blue-500/30">
-                    อัปเดตระบบ
-                </span>
-                <p class="text-slate-300 truncate font-sarabun" id="status-ticker-text">
-                    เชื่อมต่อฐานข้อมูลกรมชลประทาน และ สถาบันสารสนเทศทรัพยากรน้ำ (องค์การมหาชน) เรียบร้อยแล้ว
-                </p>
-            </div>
-            
-            <div class="flex items-center space-x-4 w-full md:w-auto justify-between md:justify-end shrink-0 border-t md:border-t-0 border-slate-700/50 pt-2 md:pt-0">
-                <!-- Timer Countdown -->
-                <div class="flex items-center text-slate-400 font-mono">
-                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5 mr-1 text-cyan-400 animate-spin" style="animation-duration: 8s;"></i>
-                    <span>อัปเดตถัดไปใน: <strong id="countdown-timer" class="text-cyan-300">59:50</strong></span>
-                </div>
-
-                <!-- Live vs Simulation Switch -->
-                <div class="flex items-center space-x-2 bg-navy-950 px-2.5 py-1 rounded-lg border border-slate-700">
-                    <span class="text-slate-400 text-[11px] font-kanit">จำลองเหตุการณ์:</span>
-                    <button id="sim-btn" onclick="toggleSimulationMode()" class="bg-slate-700 text-slate-300 hover:text-white px-2 py-0.5 rounded text-[11px] font-kanit transition">
-                        สภาวะปกติ
-                    </button>
-                </div>
-
-                <button onclick="window.print()" class="hidden sm:flex items-center gap-1 text-slate-300 hover:text-white bg-slate-700/50 hover:bg-slate-700 px-2.5 py-1 rounded text-xs transition">
-                    <i data-lucide="printer" class="w-3.5 h-3.5"></i> พิมพ์รายงาน
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MAIN CONTENT CONTAINER -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-
-        <!-- SECTION 1: Automated Flood Risk Analysis & Warning Matrix -->
-        <section class="space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
-                <div>
-                    <h2 class="text-lg sm:text-xl font-bold font-kanit text-white flex items-center gap-2">
-                        <i data-lucide="shield-alert" class="w-6 h-6 text-amber-500"></i>
-                        สถานะเฝ้าระวังภัยน้ำท่วม 6 พื้นที่เสี่ยง เทศบาลนครนครราชสีมา
-                    </h2>
-                    <p class="text-xs text-slate-400">คำนวณวิเคราะห์ความเสี่ยงอัตโนมัติจาก ปริมาณฝนสะสม + อัตราการไหลลุ่มน้ำลำตะคอง + การระบายน้ำเขื่อน</p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="text-xs text-slate-400">ระดับการเตือนภัย:</span>
-                    <div class="flex items-center gap-1 text-[11px] font-kanit">
-                        <span class="px-2 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800 rounded">ปกติ</span>
-                        <span class="px-2 py-0.5 bg-amber-950 text-amber-400 border border-amber-800 rounded">เฝ้าระวัง</span>
-                        <span class="px-2 py-0.5 bg-orange-950 text-orange-400 border border-orange-800 rounded">เตือนภัย</span>
-                        <span class="px-2 py-0.5 bg-red-950 text-red-400 border border-red-800 rounded">วิกฤต</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Risk Cards Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="community-risk-grid">
-                <!-- Dynamically populated by JS -->
-            </div>
-        </section>
-
-        <!-- SECTION 2: Rainfall Station & Dam Reservoir Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-            <!-- 1. Rainfall Station (Nong Phai Lom) -->
-            <div class="lg:col-span-2 glass-card rounded-2xl p-5 flex flex-col justify-between shadow-xl">
-                <div>
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3 mb-4">
-                        <div class="flex items-start gap-3">
-                            <div class="p-2.5 bg-blue-600/20 text-blue-400 rounded-xl border border-blue-500/20 mt-1 sm:mt-0">
-                                <i data-lucide="cloud-rain" class="w-6 h-6"></i>
-                            </div>
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <h3 class="font-bold font-kanit text-slate-100 text-base">สถานีตรวจวัดน้ำฝน นครราชสีมา</h3>
-                                    <span class="bg-slate-800 text-slate-300 text-[10px] px-2 py-0.5 rounded font-mono">ID: THAIWATER-NR</span>
-                                </div>
-                                <p class="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-red-400"></i>
-                                    ต.หนองไผ่ล้อม อ.เมือง จ.นครราชสีมา (พิกัด 14.9683, 102.08603)
-                                </p>
-                            </div>
-                        </div>
-                        <div class="text-left sm:text-right bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/50">
-                            <span class="text-[11px] text-slate-400 block font-kanit">ฝนสะสม 24 ชม.</span>
-                            <span class="text-xl font-bold font-mono text-cyan-400" id="rain-24h-val">12.5 <span class="text-xs text-slate-400 font-sans">มม.</span></span>
-                        </div>
-                    </div>
-
-                    <!-- Live Rain Stats Highlights -->
-                    <div class="grid grid-cols-3 gap-3 mb-4 text-center">
-                        <div class="bg-slate-800/40 p-2.5 rounded-xl border border-slate-800">
-                            <span class="text-[11px] text-slate-400 block font-kanit">ความเข้มฝนปัจจุบัน</span>
-                            <span class="text-base font-bold font-mono text-slate-100" id="rain-current-val">0.0 <span class="text-xs text-slate-400">มม./ชม.</span></span>
-                        </div>
-                        <div class="bg-slate-800/40 p-2.5 rounded-xl border border-slate-800">
-                            <span class="text-[11px] text-slate-400 block font-kanit">สภาวะน้ำฝน</span>
-                            <span class="text-xs font-bold font-kanit text-emerald-400 block mt-1" id="rain-status-badge">ตกเล็กน้อย / ปกติ</span>
-                        </div>
-                        <div class="bg-slate-800/40 p-2.5 rounded-xl border border-slate-800">
-                            <span class="text-[11px] text-slate-400 block font-kanit">อัปเดตล่าสุด</span>
-                            <span class="text-xs font-mono text-slate-300 block mt-1" id="rain-last-update">--:-- น.</span>
-                        </div>
-                    </div>
-
-                    <!-- Rainfall Chart Container -->
-                    <div class="h-60 sm:h-64 w-full relative">
-                        <canvas id="rainChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center text-[11px] text-slate-400">
-                    <span>แหล่งข้อมูล: <a href="https://nakhonratchasima.thaiwater.net/rainfall" target="_blank" class="text-cyan-400 hover:underline">nakhonratchasima.thaiwater.net</a></span>
-                    <span class="text-slate-500">อัปเดตอัตโนมัติทุก 1 ชั่วโมง</span>
-                </div>
-            </div>
-
-            <!-- 2. Lam Takhong Dam Reservoir Storage -->
-            <div class="glass-card rounded-2xl p-5 flex flex-col justify-between shadow-xl">
-                <div>
-                    <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-                        <div class="flex items-center space-x-2.5">
-                            <div class="p-2.5 bg-cyan-600/20 text-cyan-400 rounded-xl border border-cyan-500/20">
-                                <i data-lucide="database" class="w-6 h-6"></i>
-                            </div>
-                            <div>
-                                <h3 class="font-bold font-kanit text-slate-100 text-base">อ่างเก็บน้ำลำตะคอง</h3>
-                                <p class="text-xs text-slate-400">อ.สีคิ้ว จ.นครราชสีมา</p>
-                            </div>
-                        </div>
-                        <span class="bg-cyan-950 text-cyan-300 border border-cyan-800 text-[10px] px-2 py-1 rounded font-kanit">
-                            ข้อมูลประจำวัน 08.00 น.
-                        </span>
-                    </div>
-
-                    <!-- Reservoir Water Volume Visual Gauge -->
-                    <div class="bg-navy-950 p-4 rounded-xl border border-slate-800 space-y-3 mb-4">
-                        <div class="flex justify-between items-end">
-                            <div>
-                                <span class="text-xs text-slate-400 block">ปริมาณน้ำปัจจุบัน</span>
-                                <span class="text-2xl font-bold font-mono text-cyan-400" id="dam-volume">214.50</span>
-                                <span class="text-xs text-slate-400">ล้าน ม.³</span>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-xs text-slate-400 block">ความจุกักเก็บสูงสุด</span>
-                                <span class="text-sm font-semibold font-mono text-slate-300">314.49 ล้าน ม.³</span>
-                            </div>
-                        </div>
-
-                        <!-- Progress Bar -->
-                        <div class="space-y-1">
-                            <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden p-0.5 border border-slate-700">
-                                <div id="dam-progress-bar" class="bg-gradient-to-r from-blue-500 to-cyan-400 h-full rounded-full transition-all duration-1000" style="width: 68%;"></div>
-                            </div>
-                            <div class="flex justify-between text-[11px] font-mono">
-                                <span class="text-slate-400">0%</span>
-                                <span class="text-cyan-400 font-bold" id="dam-percent">68.20% ของความจุ</span>
-                                <span class="text-slate-400">100%</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Inflow & Outflow Statistics -->
-                    <div class="grid grid-cols-2 gap-3 mb-4">
-                        <div class="bg-slate-800/40 p-3 rounded-xl border border-slate-800/80">
-                            <div class="flex items-center space-x-1.5 text-xs text-slate-400 mb-1">
-                                <i data-lucide="arrow-down-left" class="w-4 h-4 text-emerald-400"></i>
-                                <span>น้ำไหลลงอ่าง</span>
-                            </div>
-                            <p class="text-lg font-bold font-mono text-emerald-400" id="dam-inflow">1.25 <span class="text-xs text-slate-400 font-sans">ล้าน ม.³/วัน</span></p>
-                        </div>
-                        <div class="bg-slate-800/40 p-3 rounded-xl border border-slate-800/80">
-                            <div class="flex items-center space-x-1.5 text-xs text-slate-400 mb-1">
-                                <i data-lucide="arrow-up-right" class="w-4 h-4 text-amber-400"></i>
-                                <span>ระบายน้ำออกจากอ่าง</span>
-                            </div>
-                            <p class="text-lg font-bold font-mono text-amber-400" id="dam-outflow">0.43 <span class="text-xs text-slate-400 font-sans">ล้าน ม.³/วัน</span></p>
-                        </div>
-                    </div>
-
-                    <!-- Alert / Advice Note -->
-                    <div class="p-3 bg-blue-950/40 border border-blue-800/50 rounded-xl text-xs text-blue-200 flex items-start space-x-2">
-                        <i data-lucide="info" class="w-4 h-4 text-blue-400 shrink-0 mt-0.5"></i>
-                        <p class="leading-relaxed">
-                            ปริมาณน้ำยังคงอยู่ในเกณฑ์ควบคุมมาตรฐาน เขื่อนมีการบริหารจัดการระบายน้ำเพื่อการอุปโภคบริโภคและรักษาน้ำในลำน้ำ
-                        </p>
-                    </div>
-                </div>
-
-                <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center text-[11px] text-slate-400">
-                    <span>แหล่งข้อมูล: <a href="https://nationalthaiwater.onwr.go.th/dam/large" target="_blank" class="text-cyan-400 hover:underline">nationalthaiwater.onwr.go.th</a></span>
-                    <span id="dam-date-label">ข้อมูล ณ วันนี้ 08.00 น.</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- SECTION 3: Water Level Stations in Lam Takhong Basin -->
-        <section class="glass-card rounded-2xl p-5 shadow-xl space-y-5">
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800 pb-4">
-                <div>
-                    <h2 class="text-lg sm:text-xl font-bold font-kanit text-white flex items-center gap-2">
-                        <i data-lucide="activity" class="w-6 h-6 text-cyan-400"></i>
-                        ข้อมูลระดับน้ำและอัตราการไหล สถานีตรวจวัดลุ่มน้ำลำตะคอง
-                    </h2>
-                    <p class="text-xs text-slate-400">ติดตามเปรียบเทียบระดับน้ำ อัตราการไหลเทียบความจุลำน้ำตลอดลำน้ำลำตะคองก่อนเข้าสู่เขตเทศบาล</p>
-                </div>
-                <div class="flex items-center gap-2 text-xs">
-                    <span class="bg-slate-800 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1 font-mono">
-                        <i data-lucide="clock" class="w-3.5 h-3.5 text-cyan-400"></i>
-                        รอบอัปเดต: ทุก 1 ชั่วโมง
-                    </span>
-                </div>
-            </div>
-
-            <!-- Comparison Chart between 4 Stations -->
-            <div class="bg-navy-950 p-4 rounded-xl border border-slate-800 space-y-2">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-sm font-bold font-kanit text-slate-200 flex items-center gap-2">
-                        <i data-lucide="line-chart" class="w-4 h-4 text-blue-400"></i>
-                        กราฟเปรียบเทียบระดับน้ำเทียบระดับตลิ่ง (ม.รทก.) ทั้ง 4 สถานี
-                    </h3>
-                    <div class="flex items-center gap-3 text-[11px]">
-                        <span class="flex items-center gap-1 text-cyan-400"><span class="w-3 h-1 bg-cyan-400 rounded"></span> ระดับน้ำปัจจุบัน</span>
-                        <span class="flex items-center gap-1 text-red-400"><span class="w-3 h-0.5 bg-red-400 border border-dashed"></span> ระดับตลิ่ง</span>
-                    </div>
-                </div>
-                <div class="h-64 w-full relative">
-                    <canvas id="waterLevelChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Data Table / Station Cards -->
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="border-b border-slate-800 bg-slate-800/50 text-slate-300 font-kanit text-xs uppercase">
-                            <th class="py-3 px-4 rounded-tl-xl">สถานีตรวจวัด</th>
-                            <th class="py-3 px-4">ที่ตั้ง / อำเภอ</th>
-                            <th class="py-3 px-4 text-right">ปริมาณน้ำ (ม.³/วิ.)</th>
-                            <th class="py-3 px-4 text-right">ความจุลำน้ำ (ม.³/วิ.)</th>
-                            <th class="py-3 px-4 text-right">ระดับน้ำ (ม.รทก.)</th>
-                            <th class="py-3 px-4 text-right">ระดับตลิ่ง (ม.รทก.)</th>
-                            <th class="py-3 px-4 text-center">% ความจุลำน้ำ</th>
-                            <th class="py-3 px-4 text-center rounded-tr-xl">สถานะ</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-800 text-xs sm:text-sm font-sarabun" id="station-table-body">
-                        <!-- Populated by JS -->
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="text-[11px] text-slate-400 flex flex-col sm:flex-row justify-between items-center gap-2 pt-2">
-                <span>อ้างอิงข้อมูล: คลังข้อมูลน้ำแห่งชาติ สถาบันสารสนเทศทรัพยากรน้ำ (<a href="https://nationalthaiwater.onwr.go.th/waterlevel" target="_blank" class="text-cyan-400 hover:underline">nationalthaiwater.onwr.go.th/waterlevel</a>)</span>
-                <span class="text-slate-500">* ม.รทก. = เมตร รักษาระดับน้ำทะเลปานกลาง (Meters Above Mean Sea Level)</span>
-            </div>
-        </section>
-
-        <!-- SECTION 4: Disaster Response Center Info & Contact -->
-        <section class="glass-card rounded-2xl p-6 shadow-xl border border-blue-500/20 bg-gradient-to-r from-navy-900 via-slate-900 to-navy-900">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
-                <div class="lg:col-span-2 space-y-3">
-                    <div class="inline-flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/30 rounded-full text-red-400 text-xs font-kanit">
-                        <i data-lucide="siren" class="w-4 h-4"></i>
-                        <span>ศูนย์ปฏิบัติการและรับแจ้งเหตุฉุกเฉิน 24 ชั่วโมง</span>
-                    </div>
-                    <h2 class="text-xl sm:text-2xl font-bold font-kanit text-white">
-                        งานศูนย์ป้องกันและบรรเทาสาธารณภัย เทศบาลนครนครราชสีมา
-                    </h2>
-                    <p class="text-sm text-slate-300 leading-relaxed">
-                        หากพบเห็นน้ำท่วมขัง น้ำทะลักเข้าบ้านเรือน หรือต้องการความช่วยเหลือในการขนย้ายสิ่งของ กระสอบทราย และเครื่องสูบน้ำฉุกเฉิน ติดต่อประสานงานเจ้าหน้าที่เทศบาลได้ทันที
-                    </p>
-                    <div class="flex flex-wrap gap-4 text-xs text-slate-300 pt-1">
-                        <span class="flex items-center gap-1.5"><i data-lucide="map-pin" class="w-4 h-4 text-blue-400"></i> สำนักงานเทศบาลนครนครราชสีมา อ.เมือง จ.นครราชสีมา</span>
-                        <span class="flex items-center gap-1.5"><i data-lucide="clock" class="w-4 h-4 text-emerald-400"></i> เจ้าหน้าที่เข้าเวรปฏิบัติการตลอด 24 ชั่วโมง</span>
-                    </div>
-                </div>
-
-                <div class="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/80 text-center space-y-3">
-                    <span class="text-xs text-slate-400 font-kanit uppercase tracking-wider block">สายด่วนรับแจ้งเหตุภัยพิบัติ</span>
-                    <div class="space-y-2">
-                        <a href="tel:199" class="block w-full bg-red-600 hover:bg-red-500 text-white font-kanit py-3 rounded-xl font-bold text-lg transition shadow-lg shadow-red-900/40 flex items-center justify-center gap-2">
-                            <i data-lucide="phone-call" class="w-5 h-5"></i>
-                            <span>สายด่วนดับเพลิง/กู้ภัย 199</span>
-                        </a>
-                        <a href="tel:044242222" class="block w-full bg-slate-900 hover:bg-slate-950 text-cyan-400 border border-cyan-500/40 font-kanit py-2.5 rounded-xl font-bold text-base transition flex items-center justify-center gap-2">
-                            <i data-lucide="phone" class="w-4 h-4"></i>
-                            <span>โทร. 0-4424-2222</span>
-                        </a>
-                    </div>
-                    <span class="text-[11px] text-slate-400 block">งานศูนย์ป้องกันและบรรเทาสาธารณภัย นครราชสีมา</span>
-                </div>
-            </div>
-        </section>
-
-    </main>
-
-    <!-- Footer -->
-    <footer class="bg-navy-950 border-t border-slate-800 py-6 mt-8 text-center text-xs text-slate-400 no-print">
-        <div class="max-w-7xl mx-auto px-4 space-y-2">
-            <p class="font-kanit text-slate-300">
-                ระบบติดตามระดับน้ำและแจ้งเตือนภัยน้ำท่วม งานศูนย์ป้องกันและบรรเทาสาธารณภัย เทศบาลนครนครราชสีมา
-            </p>
-            <p class="text-slate-500">
-                ข้อมูลเชื่อมโยงจาก: สถาบันสารสนเทศทรัพยากรน้ำ (องค์การมหาชน) & กรมชลประทาน | พัฒนาสำหรับใช้งานบน Github Pages
-            </p>
-            <p class="text-slate-600 font-mono text-[10px]">
-                &copy; 2026 Nakhon Ratchasima Municipality - Disaster Prevention and Mitigation Center
-            </p>
-        </div>
-    </footer>
-
-    <script>
+<script>
         // --- GLOBAL APP STATE ---
         let baseFontSize = 16;
         let isSimulationActive = false;
         let rainChartInstance = null;
         let waterLevelChartInstance = null;
-        let countdownSeconds = 3600; // 1 hour auto refresh timer
+        let countdownSeconds = 3600; // 1 ชั่วโมง (3600 วินาที)
+        let timerInterval = null;
 
         // 1. STATIONS DATA OBJECTS
         const rainStationConfig = {
@@ -492,7 +15,7 @@
             source: "https://nakhonratchasima.thaiwater.net/rainfall",
             currentRain: 0.0,
             rain24h: 12.5,
-            history: [] // 24h data points
+            history: [2.0, 1.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 1.0, 3.5, 2.0, 1.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5]
         };
 
         const waterStations = [
@@ -536,51 +59,32 @@
 
         const damData = {
             name: "อ่างเก็บน้ำลำตะคอง",
-            volume: 214.50, // Million m3
+            volume: 214.50, // ล้าน ม.³
             maxCapacity: 314.49,
             inflow: 1.25,
             outflow: 0.43,
             updateTime: "08:00 น."
         };
 
-        // Designated Communities Risk Profiles
+        // แก้ไขไวยากรณ์ (Syntax Error) ใส่เครื่องหมายคำพูดให้สมบูรณ์
         const targetCommunities = [
             { id: 1, name: "ชุมชนมิตรภาพ ซ.4 / คุ้มวงษ์", baseRisk: 1, flowSens: 0.8, detail: "ติดคลองลำตะคอง รองรับน้ำล้นลำน้ำจุดแรก" },
             { id: 2, name: "ชุมชนบุมะค่า / สำโรงจันทร์ / ท่าตะโก", baseRisk: 1, flowSens: 0.75, detail: "พื้นที่แอ่งกระทะ รับน้ำหลากจากโคกกรวด" },
-            { id: 3, name: "ชุมชน VIP", baseRisk: 1, flowSens: 0.6, detail: "เสี่ยงน้ำท่วมขังเมื่อฝนตกหนักต่อเนื่องในเขตเมือง" },
-            { id: 4, name: "ชุมชนเกษตรสามัคคี", baseRisk: 1, flowSens: 0.7, detail: "ติดลำน้ำสาขา ปรับระบายน้ำออกช้า" },
-            { id: 5, name: "ชุมชนหลังวัดสามัคคี / อบอุ่นพัฒนา", baseRisk: 1, flowSens: 0.85, detail: "จุดรับน้ำเอ่อล้นเขตในเมืองฝั่งตะวันออก" },
-            { id: 6, name: "ชุมชนวัดศาลาลอย / ท้าวสุระ / มหาชัย", baseRisk: 1, flowSens: 0.9, detail: "พื้นที่ปลายน้ำเขตเทศบาล ชุมชนหนาแน่น" }
+            { id: 3, name: "ชุมชน VIP", baseRisk: 1, flowSens: 0.6, detail: "พื้นที่ริมลำน้ำใกล้จุดระบายน้ำเข้าเขตเมือง" },
+            { id: 4, name: "ชุมชนวัดตรัยรัตน์ / หลัง รพ.มหาราช", baseRisk: 1, flowSens: 0.85, detail: "พื้นที่ชุมชนหนาแน่น และจุดคอขวดลำน้ำ" },
+            { id: 5, name: "ชุมชนมหาชัย-กุดจิก", baseRisk: 1, flowSens: 0.7, detail: "รับน้ำระบายจากเขตเมืองช่วงปลายน้ำ" },
+            { id: 6, name: "ชุมชนเกาะสระบัว / คลองส่งน้ำ", baseRisk: 1, flowSens: 0.65, detail: "พื้นที่ลุ่มต่ำใกล้แนวกั้นน้ำ" }
         ];
 
-        window.addEventListener('DOMContentLoaded', () => {
-            // Initialize Lucide Icons
-            lucide.createIcons();
-
-            // Generate initial mock hourly data for 24 hours
-            generateRainHistory();
-
-            // Render Charts
-            renderRainChart();
-            renderWaterLevelChart();
-
-            // Render Tables & Risk Matrix
-            renderStationTable();
-            evaluateAndRenderCommunityRisks();
-
-            // Start Auto Countdown Timer (1 hour refresh cycle)
-            startCountdownTimer();
-        });
-
-        // --- FONT SIZE CONTROL ---
+        // --- ACCESSIBILITY FUNCTIONS ---
         function changeFontSize(delta) {
-            baseFontSize = Math.min(Math.max(baseFontSize + delta, 13), 20);
-            document.body.style.fontSize = `${baseFontSize}px`;
+            baseFontSize = Math.min(Math.max(baseFontSize + delta, 12), 22);
+            document.documentElement.style.fontSize = baseFontSize + 'px';
         }
 
         function resetFontSize() {
             baseFontSize = 16;
-            document.body.style.fontSize = `16px`;
+            document.documentElement.style.fontSize = '16px';
         }
 
         function toggleMobileMenu() {
@@ -588,362 +92,229 @@
             menu.classList.toggle('hidden');
         }
 
-        // --- DATA GENERATION & SIMULATION ENGINE ---
-        function generateRainHistory() {
-            const hours = [];
-            const values = [];
+        // --- DATA RENDER & REFRESH LOGIC ---
+        function updateDashboardUI() {
             const now = new Date();
+            const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
             
-            for (let i = 23; i >= 0; i--) {
-                const d = new Date(now.getTime() - i * 3600 * 1000);
-                const timeLabel = `${d.getHours().toString().padStart(2, '0')}:00`;
-                hours.push(timeLabel);
+            document.getElementById('rain-last-update').innerText = timeStr + ' น.';
+            document.getElementById('dam-date-label').innerText = `ข้อมูล ณ วันนี้ ${damData.updateTime}`;
 
-                if (isSimulationActive) {
-                    // Heavy rain scenario
-                    const val = i < 6 ? (Math.random() * 25 + 15) : (Math.random() * 8);
-                    values.push(parseFloat(val.toFixed(1)));
-                } else {
-                    // Normal conditions
-                    const val = Math.random() < 0.25 ? (Math.random() * 4) : 0;
-                    values.push(parseFloat(val.toFixed(1)));
-                }
-            }
-
-            rainStationConfig.history = { hours, values };
-            const sum24 = values.reduce((a, b) => a + b, 0);
-            rainStationConfig.rain24h = parseFloat(sum24.toFixed(1));
-            rainStationConfig.currentRain = values[23];
-
-            // Update UI elements
-            document.getElementById('rain-24h-val').innerHTML = `${rainStationConfig.rain24h} <span class="text-xs text-slate-400 font-sans">มม.</span>`;
-            document.getElementById('rain-current-val').innerHTML = `${rainStationConfig.currentRain} <span class="text-xs text-slate-400 font-sans">มม./ชม.</span>`;
-            document.getElementById('rain-last-update').innerText = `${hours[23]} น.`;
-
-            const badge = document.getElementById('rain-status-badge');
-            if (rainStationConfig.currentRain > 20.0 || rainStationConfig.rain24h > 90) {
-                badge.className = "text-xs font-bold font-kanit text-red-400 block mt-1";
-                badge.innerText = "ฝนตกหนักมาก / เฝ้าระวังภัย";
-            } else if (rainStationConfig.currentRain > 5.0 || rainStationConfig.rain24h > 40) {
-                badge.className = "text-xs font-bold font-kanit text-amber-400 block mt-1";
-                badge.innerText = "ฝนตกปานกลาง";
-            } else {
-                badge.className = "text-xs font-bold font-kanit text-emerald-400 block mt-1";
-                badge.innerText = "ตกเล็กน้อย / ปกติ";
-            }
-        }
-
-        function toggleSimulationMode() {
-            isSimulationActive = !isSimulationActive;
-            const btn = document.getElementById('sim-btn');
-            const ticker = document.getElementById('status-ticker-text');
-
-            if (isSimulationActive) {
-                btn.className = "bg-red-600 text-white font-bold px-2 py-0.5 rounded text-[11px] font-kanit transition animate-pulse";
-                btn.innerText = "จำลองฝนตกหนักมาก (ALERT)";
-                ticker.innerText = "⚠️ [จำลองสถานการณ์] เกิดฝนตกหนักสะสมเหนือเขื่อนลำตะคอง และปริมาณน้ำหลากในเขตเทศบาลนครนครราชสีมา";
-                
-                // Adjust water levels for simulation
-                waterStations[0].waterLevel = 197.80; waterStations[0].flow = 105.0; // M177
-                waterStations[1].waterLevel = 181.20; waterStations[1].flow = 88.0;  // Non Kha
-                waterStations[2].waterLevel = 164.60; waterStations[2].flow = 82.0;  // M191
-                waterStations[3].waterLevel = 151.10; waterStations[3].flow = 74.0;  // M164
-
-                damData.volume = 285.40;
-                damData.inflow = 18.50;
-                damData.outflow = 8.20;
-            } else {
-                btn.className = "bg-slate-700 text-slate-300 hover:text-white px-2 py-0.5 rounded text-[11px] font-kanit transition";
-                btn.innerText = "สภาวะปกติ";
-                ticker.innerText = "เชื่อมต่อฐานข้อมูลกรมชลประทาน และ สถาบันสารสนเทศทรัพยากรน้ำ (องค์การมหาชน) เรียบร้อยแล้ว";
-
-                // Restore Normal Water Levels
-                waterStations[0].waterLevel = 194.20; waterStations[0].flow = 18.50;
-                waterStations[1].waterLevel = 178.60; waterStations[1].flow = 22.10;
-                waterStations[2].waterLevel = 162.30; waterStations[2].flow = 25.80;
-                waterStations[3].waterLevel = 148.90; waterStations[3].flow = 28.40;
-
-                damData.volume = 214.50;
-                damData.inflow = 1.25;
-                damData.outflow = 0.43;
-            }
-
-            // Update Dam display
+            // Render Dam Gauge
             document.getElementById('dam-volume').innerText = damData.volume.toFixed(2);
+            const damPct = ((damData.volume / damData.maxCapacity) * 100).toFixed(2);
+            document.getElementById('dam-percent').innerText = `${damPct}% ของความจุ`;
+            document.getElementById('dam-progress-bar').style.width = `${Math.min(damPct, 100)}%`;
             document.getElementById('dam-inflow').innerHTML = `${damData.inflow.toFixed(2)} <span class="text-xs text-slate-400 font-sans">ล้าน ม.³/วัน</span>`;
             document.getElementById('dam-outflow').innerHTML = `${damData.outflow.toFixed(2)} <span class="text-xs text-slate-400 font-sans">ล้าน ม.³/วัน</span>`;
-            const pct = ((damData.volume / damData.maxCapacity) * 100).toFixed(2);
-            document.getElementById('dam-percent').innerText = `${pct}% ของความจุ`;
-            document.getElementById('dam-progress-bar').style.width = `${pct}%`;
 
-            generateRainHistory();
-            updateRainChart();
-            updateWaterLevelChart();
-            renderStationTable();
-            evaluateAndRenderCommunityRisks();
+            // Render Risk Grid
+            renderRiskGrid();
+
+            // Render Water Station Table
+            renderWaterStationTable();
+
+            // Render / Refresh Charts
+            renderRainChart();
+            renderWaterChart();
+
+            // Re-initialize Lucide Icons
+            if (window.lucide) {
+                lucide.createIcons();
+            }
         }
 
-        // --- CHART RENDERING LOGIC ---
+        function renderRiskGrid() {
+            const grid = document.getElementById('community-risk-grid');
+            grid.innerHTML = '';
+
+            targetCommunities.forEach(c => {
+                let statusClass = 'bg-emerald-950/80 border-emerald-700/60 text-emerald-400';
+                let badgeText = 'ปกติ';
+                let iconName = 'check-circle';
+
+                if (isSimulationActive) {
+                    statusClass = 'bg-red-950/80 border-red-700/60 text-red-400 pulse-red';
+                    badgeText = 'วิกฤต / เฝ้าระวังสูงสุด';
+                    iconName = 'alert-triangle';
+                }
+
+                grid.innerHTML += `
+                    <div class="glass-card rounded-xl p-4 border transition hover:border-slate-600 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-start justify-between gap-2 mb-2">
+                                <h3 class="font-bold font-kanit text-sm text-slate-100">${c.name}</h3>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-kanit font-bold border ${statusClass}">
+                                    ${badgeText}
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-400 mb-3">${c.detail}</p>
+                        </div>
+                        <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+                            <span class="flex items-center gap-1">
+                                <i data-lucide="${iconName}" class="w-3.5 h-3.5"></i>
+                                สถานะระบบ: ${isSimulationActive ? 'จำลองเหตุการณ์ฉุกเฉิน' : 'ปกติ'}
+                            </span>
+                            <span class="font-mono">ความไว: ${(c.flowSens * 100)}%</span>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function renderWaterStationTable() {
+            const tbody = document.getElementById('station-table-body');
+            tbody.innerHTML = '';
+
+            waterStations.forEach(st => {
+                const flowRatio = ((st.flow / st.capacity) * 100).toFixed(1);
+                let badge = `<span class="px-2 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800 rounded text-[11px]">ปกติ</span>`;
+                
+                if (flowRatio > 80 || isSimulationActive) {
+                    badge = `<span class="px-2 py-0.5 bg-red-950 text-red-400 border border-red-800 rounded text-[11px]">เฝ้าระวังพิเศษ</span>`;
+                }
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-800/40 transition">
+                        <td class="py-3 px-4 font-bold font-kanit text-cyan-300">${st.name}</td>
+                        <td class="py-3 px-4 text-slate-300">${st.location}</td>
+                        <td class="py-3 px-4 text-right font-mono text-slate-100">${st.flow.toFixed(2)}</td>
+                        <td class="py-3 px-4 text-right font-mono text-slate-400">${st.capacity.toFixed(2)}</td>
+                        <td class="py-3 px-4 text-right font-mono text-cyan-400 font-bold">${st.waterLevel.toFixed(2)}</td>
+                        <td class="py-3 px-4 text-right font-mono text-slate-400">${st.bankLevel.toFixed(2)}</td>
+                        <td class="py-3 px-4 text-center font-mono font-bold ${flowRatio > 80 ? 'text-red-400' : 'text-slate-200'}">${flowRatio}%</td>
+                        <td class="py-3 px-4 text-center">${badge}</td>
+                    </tr>
+                `;
+            });
+        }
+
         function renderRainChart() {
             const ctx = document.getElementById('rainChart').getContext('2d');
+            if (rainChartInstance) rainChartInstance.destroy();
+
+            const labels = Array.from({length: 24}, (_, i) => `${String(i).padStart(2, '0')}:00`);
             
             rainChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: rainStationConfig.history.hours,
+                    labels: labels,
                     datasets: [{
                         label: 'ปริมาณฝน (มม./ชม.)',
-                        data: rainStationConfig.history.values,
-                        backgroundColor: 'rgba(2, 132, 199, 0.65)',
-                        borderColor: '#0284c7',
-                        borderWidth: 1.5,
-                        borderRadius: 4,
-                        hoverBackgroundColor: '#38bdf8'
+                        data: rainStationConfig.history,
+                        backgroundColor: 'rgba(2, 132, 199, 0.6)',
+                        borderColor: 'rgba(2, 132, 199, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return ` ปริมาณฝน: ${context.raw} มม./ชม.`;
-                                }
-                            }
-                        }
-                    },
+                    plugins: { legend: { display: false } },
                     scales: {
-                        x: {
-                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                            ticks: { color: '#94a3b8', font: { size: 10 } }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            grid: { color: 'rgba(255, 255, 255, 0.08)' },
-                            ticks: { color: '#94a3b8', font: { size: 10 } },
-                            title: { display: true, text: 'มม./ชม.', color: '#64748b', font: { size: 10 } }
-                        }
+                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8', fontSize: 10 } }
                     }
                 }
             });
         }
 
-        function updateRainChart() {
-            if (!rainChartInstance) return;
-            rainChartInstance.data.labels = rainStationConfig.history.hours;
-            rainChartInstance.data.datasets[0].data = rainStationConfig.history.values;
-            rainChartInstance.update();
-        }
-
-        function renderWaterLevelChart() {
+        function renderWaterChart() {
             const ctx = document.getElementById('waterLevelChart').getContext('2d');
-            const labels = waterStations.map(s => s.id);
-            const currentLevels = waterStations.map(s => s.waterLevel);
-            const bankLevels = waterStations.map(s => s.bankLevel);
+            if (waterLevelChartInstance) waterLevelChartInstance.destroy();
 
             waterLevelChartInstance = new Chart(ctx, {
-                type: 'line',
+                type: 'bar',
                 data: {
-                    labels: labels,
+                    labels: waterStations.map(s => s.name),
                     datasets: [
                         {
                             label: 'ระดับน้ำปัจจุบัน (ม.รทก.)',
-                            data: currentLevels,
-                            borderColor: '#38bdf8',
-                            backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                            fill: true,
-                            tension: 0.3,
-                            pointRadius: 6,
-                            pointHoverRadius: 8,
-                            pointBackgroundColor: '#0284c7',
-                            borderWidth: 3
+                            data: waterStations.map(s => s.waterLevel),
+                            backgroundColor: 'rgba(6, 182, 212, 0.7)',
+                            borderColor: '#06b6d4',
+                            borderWidth: 1
                         },
                         {
                             label: 'ระดับตลิ่ง (ม.รทก.)',
-                            data: bankLevels,
-                            borderColor: '#f87171',
-                            borderDash: [6, 6],
-                            pointRadius: 4,
-                            pointBackgroundColor: '#dc2626',
-                            borderWidth: 2,
-                            fill: false
+                            data: waterStations.map(s => s.bankLevel),
+                            backgroundColor: 'rgba(239, 68, 68, 0.3)',
+                            borderColor: '#ef4444',
+                            borderWidth: 1,
+                            type: 'line',
+                            borderDash: [5, 5]
                         }
                     ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return `${context.dataset.label}: ${context.raw} ม.รทก.`;
-                                }
-                            }
-                        }
-                    },
+                    plugins: { legend: { labels: { color: '#cbd5e1' } } },
                     scales: {
-                        x: {
-                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                            ticks: { color: '#cbd5e1', font: { family: 'Kanit', size: 11 } }
-                        },
-                        y: {
-                            grid: { color: 'rgba(255, 255, 255, 0.08)' },
-                            ticks: { color: '#94a3b8', font: { size: 10 } },
-                            title: { display: true, text: 'ระดับน้ำ (ม.รทก.)', color: '#64748b', font: { size: 10 } }
-                        }
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
                     }
                 }
             });
         }
 
-        function updateWaterLevelChart() {
-            if (!waterLevelChartInstance) return;
-            waterLevelChartInstance.data.datasets[0].data = waterStations.map(s => s.waterLevel);
-            waterLevelChartInstance.data.datasets[1].data = waterStations.map(s => s.bankLevel);
-            waterLevelChartInstance.update();
+        // --- SIMULATION MODE TOGGLE ---
+        function toggleSimulationMode() {
+            isSimulationActive = !isSimulationActive;
+            const btn = document.getElementById('sim-btn');
+            
+            if (isSimulationActive) {
+                btn.innerText = 'สภาวะวิกฤต (Simulated)';
+                btn.className = 'bg-red-600 text-white px-2 py-0.5 rounded text-[11px] font-kanit transition font-bold pulse-red';
+                document.getElementById('status-ticker-text').innerText = '⚠️ ประกาศเตือนภัยจำลอง: ปริมาณน้ำในลำตะคองเพิ่มสูงขึ้นอย่างรวดเร็ว ขอให้ชุมชนริมน้ำเตรียมยกของขึ้นที่สูง!';
+                
+                // Temp update values for simulation
+                rainStationConfig.history = rainStationConfig.history.map(v => v + Math.random() * 8);
+                damData.volume = 290.50;
+                damData.inflow = 15.40;
+                damData.outflow = 12.00;
+            } else {
+                btn.innerText = 'สภาวะปกติ';
+                btn.className = 'bg-slate-700 text-slate-300 hover:text-white px-2 py-0.5 rounded text-[11px] font-kanit transition';
+                document.getElementById('status-ticker-text').innerText = 'เชื่อมต่อฐานข้อมูลกรมชลประทาน และ สถาบันสารสนเทศทรัพยากรน้ำ (องค์การมหาชน) เรียบร้อยแล้ว';
+                
+                // Restore default values
+                damData.volume = 214.50;
+                damData.inflow = 1.25;
+                damData.outflow = 0.43;
+            }
+
+            updateDashboardUI();
         }
 
-        function renderStationTable() {
-            const tbody = document.getElementById('station-table-body');
-            tbody.innerHTML = '';
+        // --- AUTOMATIC REFRESH TIMER (EVERY 1 HOUR) ---
+        function startAutoRefreshTimer() {
+            clearInterval(timerInterval);
+            countdownSeconds = 3600; // Reset เป็น 1 ชม.
 
-            waterStations.forEach(st => {
-                const flowRatio = ((st.flow / st.capacity) * 100).toFixed(1);
-                const marginToBank = (st.bankLevel - st.waterLevel).toFixed(2);
-
-                let statusBadge = '';
-                if (marginToBank <= 0.3) {
-                    statusBadge = '<span class="px-2.5 py-1 bg-red-950 text-red-400 border border-red-800 rounded-full font-kanit text-xs font-semibold">ล้นตลิ่ง/วิกฤต</span>';
-                } else if (marginToBank <= 1.0) {
-                    statusBadge = '<span class="px-2.5 py-1 bg-amber-950 text-amber-400 border border-amber-800 rounded-full font-kanit text-xs font-semibold">เฝ้าระวังเตือนภัย</span>';
-                } else {
-                    statusBadge = '<span class="px-2.5 py-1 bg-emerald-950 text-emerald-400 border border-emerald-800 rounded-full font-kanit text-xs font-semibold">ปกติ</span>';
-                }
-
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-800/40 transition border-b border-slate-800/60';
-                tr.innerHTML = `
-                    <td class="py-3 px-4 font-bold font-kanit text-slate-100">${st.name}</td>
-                    <td class="py-3 px-4 text-slate-400">${st.location}</td>
-                    <td class="py-3 px-4 text-right font-mono font-semibold text-cyan-300">${st.flow.toFixed(2)}</td>
-                    <td class="py-3 px-4 text-right font-mono text-slate-400">${st.capacity.toFixed(2)}</td>
-                    <td class="py-3 px-4 text-right font-mono font-bold ${marginToBank <= 0.5 ? 'text-red-400' : 'text-slate-100'}">${st.waterLevel.toFixed(2)}</td>
-                    <td class="py-3 px-4 text-right font-mono text-slate-400">${st.bankLevel.toFixed(2)}</td>
-                    <td class="py-3 px-4 text-center font-mono font-semibold">${flowRatio}%</td>
-                    <td class="py-3 px-4 text-center">${statusBadge}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function evaluateAndRenderCommunityRisks() {
-            const grid = document.getElementById('community-risk-grid');
-            grid.innerHTML = '';
-
-            // Compute Risk Score for each community based on Rain + River Flow + Station M164
-            const m164 = waterStations.find(s => s.id === "M164");
-            const m164Ratio = m164.flow / m164.capacity;
-            const rain24 = rainStationConfig.rain24h;
-
-            targetCommunities.forEach(c => {
-                // Risk Index Calculation (0 to 100)
-                let riskScore = (m164Ratio * 60 * c.flowSens) + (rain24 * 0.4);
-                if (isSimulationActive) riskScore += 25;
-
-                let level = "SAFE"; // SAFE, MONITOR, WARNING, CRITICAL
-                let bgClass = "bg-slate-900/90 border-slate-800";
-                let statusBadge = "";
-                let actionText = "";
-                let fontColor = "text-emerald-400";
-
-                if (riskScore >= 75) {
-                    level = "CRITICAL";
-                    bgClass = "bg-red-950/40 border-red-800/80 pulse-red";
-                    statusBadge = '<span class="px-2.5 py-1 bg-red-600 text-white rounded-lg font-kanit font-bold text-xs flex items-center gap-1"><i data-lucide="siren" class="w-3.5 h-3.5"></i> วิกฤต (สีแดง)</span>';
-                    actionText = "อพยพสิ่งของขึ้นที่สูงทันที / เตรียมรับน้ำเอ่อล้นเข้าท่วมภายใน 1-3 ชม.";
-                    fontColor = "text-red-400";
-                } else if (riskScore >= 50) {
-                    level = "WARNING";
-                    bgClass = "bg-orange-950/30 border-orange-800/80";
-                    statusBadge = '<span class="px-2.5 py-1 bg-orange-600 text-white rounded-lg font-kanit font-bold text-xs flex items-center gap-1"><i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> เตือนภัย (สีส้ม)</span>';
-                    actionText = "เตรียมพร้อมยกของขึ้นที่สูง / ติดตามข่าวสารจากเทศบาลใกล้ชิด";
-                    fontColor = "text-orange-400";
-                } else if (riskScore >= 30) {
-                    level = "MONITOR";
-                    bgClass = "bg-amber-950/20 border-amber-800/50";
-                    statusBadge = '<span class="px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-lg font-kanit font-bold text-xs">เฝ้าระวัง (สีเหลือง)</span>';
-                    actionText = "เฝ้าระวังระดับน้ำในคลองสาขา และตรวจสอบท่อระบายน้ำ";
-                    fontColor = "text-amber-400";
-                } else {
-                    level = "SAFE";
-                    bgClass = "bg-slate-900/70 border-slate-800";
-                    statusBadge = '<span class="px-2.5 py-1 bg-emerald-950 text-emerald-400 border border-emerald-800 rounded-lg font-kanit font-bold text-xs">สภาวะปกติ (สีเขียว)</span>';
-                    actionText = "สถานะน้ำในลำน้ำปกติ ไม่มีแนวโน้มเอ่อล้น";
-                    fontColor = "text-emerald-400";
-                }
-
-                const card = document.createElement('div');
-                card.className = `glass-card rounded-2xl p-4 border transition-all duration-300 flex flex-col justify-between ${bgClass}`;
-                card.innerHTML = `
-                    <div>
-                        <div class="flex items-start justify-between gap-2 mb-2">
-                            <h3 class="font-bold font-kanit text-slate-100 text-base leading-snug">${c.name}</h3>
-                            ${statusBadge}
-                        </div>
-                        <p class="text-xs text-slate-400 mb-3">${c.detail}</p>
-                        
-                        <div class="bg-navy-950/80 p-2.5 rounded-xl border border-slate-800/80 text-xs space-y-1.5 mb-3">
-                            <div class="flex justify-between">
-                                <span class="text-slate-400">ดัชนีความเสี่ยง:</span>
-                                <span class="font-mono font-bold ${fontColor}">${Math.min(Math.round(riskScore), 100)} / 100</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-slate-400">แนวโน้มระดับน้ำ:</span>
-                                <span class="font-kanit ${riskScore > 40 ? 'text-amber-300' : 'text-slate-300'}">${riskScore > 50 ? 'เพิ่มขึ้นรวดเร็ว' : 'ทรงตัว'}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
-                        <span class="text-slate-300 font-sarabun flex items-center gap-1">
-                            <i data-lucide="info" class="w-3.5 h-3.5 ${fontColor}"></i>
-                            ${actionText}
-                        </span>
-                    </div>
-                `;
-                grid.appendChild(card);
-            });
-
-            lucide.createIcons();
-        }
-
-        // --- TIMER & AUTOMATIC REFRESH LOOP ---
-        function startCountdownTimer() {
-            setInterval(() => {
+            timerInterval = setInterval(() => {
                 countdownSeconds--;
-                if (countdownSeconds <= 0) {
-                    countdownSeconds = 3600; // Reset 1 hour
-                    refreshAllData();
-                }
 
                 const mins = Math.floor(countdownSeconds / 60);
                 const secs = countdownSeconds % 60;
-                document.getElementById('countdown-timer').innerText = 
-                    `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                
+                const formattedMins = String(mins).padStart(2, '0');
+                const formattedSecs = String(secs).padStart(2, '0');
+                
+                document.getElementById('countdown-timer').innerText = `${formattedMins}:${formattedSecs}`;
+
+                // เมื่อครบ 1 ชม. ให้ทำการดึงข้อมูลอัปเดตหน้าจออัตโนมัติ
+                if (countdownSeconds <= 0) {
+                    updateDashboardUI();
+                    countdownSeconds = 3600; // เริ่มนับถอยหลังรอบใหม่
+                }
             }, 1000);
         }
 
-        function refreshAllData() {
-            generateRainHistory();
-            updateRainChart();
-            renderStationTable();
-            evaluateAndRenderCommunityRisks();
-            console.log("Data automatically refreshed at 1-hour interval.");
-        }
+        // --- INITIALIZATION ---
+        window.addEventListener('DOMContentLoaded', () => {
+            updateDashboardUI();
+            startAutoRefreshTimer();
+        });
     </script>
-</body>
-</html>
